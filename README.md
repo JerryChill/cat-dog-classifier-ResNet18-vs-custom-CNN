@@ -1,6 +1,6 @@
 # 猫狗图像分类器
 
-基于 PyTorch 的图像分类项目，用于区分猫和狗。项目对比了两种方案：迁移学习（ResNet18）与从零训练（自定义 CNN）。
+基于 PyTorch 的图像分类项目，用于区分猫和狗。项目对比了两种方案：迁移学习（ResNet18）与从零训练（自定义 CNN），并提供 FastAPI Web 界面供交互测试。
 
 ## 项目结构
 
@@ -10,6 +10,8 @@
 - `train_cnn.py`：自定义 CNN 训练脚本
 - `predict.py`：ResNet18 模型预测脚本
 - `evaluate_cnn.py`：自定义 CNN 模型评估脚本
+- `app.py`：FastAPI Web 服务
+- `templates/index.html`：Web 前端页面
 
 ## 环境依赖
 
@@ -18,37 +20,29 @@
 - torchvision
 - Pillow
 - scikit-learn
+- fastapi
+- uvicorn
 
 ## 如何运行
 
-1. 激活环境：
-    conda activate torch_gpu
+### 1. 激活环境
 
-2. 训练 ResNet18 模型：
-    python train_resnet.py
+conda activate torch_gpu
 
-3. 训练自定义 CNN 模型：
-    python train_cnn.py
+### 2. 训练模型
 
-4. 用 ResNet18 模型预测单张图片：
-    python predict.py "图片路径"
+python train_resnet.py
+python train_cnn.py
 
-5. 评估自定义 CNN 模型整体表现：
-    python evaluate_cnn.py
+### 3. 命令行预测
 
-## 结果
+python predict.py "图片路径"
 
-| 模型 | 验证准确率 |
-|------|-----------|
-| ResNet18 | 92% |
-| 自定义 CNN | 85% |
+### 4. 启动 Web 界面
 
-## 后续改进方向
+python -m uvicorn app:app --reload
 
-- 增加数据增强策略
-- 尝试更大的模型（如 ResNet50）
-- 部署为 Web 应用
-
+浏览器打开 http://127.0.0.1:8000 ，上传图片即可查看预测结果。
 
 ## 训练结果
 
@@ -82,52 +76,52 @@
 
 ## 模型对比
 
-| 模型       | 验证准确率      | 训练方式                 |
-|----------|------------|----------------------|
-| ResNet18 | **94.86%** | 迁移学习（ImageNet 预训练）   |
-| 自定义 CNN  | 78.24%     | 从零训练                 |
+| 模型 | 验证准确率 | 训练方式 |
+|------|-----------|---------|
+| ResNet18 | **94.86%** | 迁移学习（ImageNet 预训练） |
+| 自定义 CNN | 78.24% | 从零训练 |
 
-**结论**：在相同数据和训练轮数下，迁移学习显著优于从零训练。ResNet18 借助 ImageNet 预训练权重，仅 5 个 epoch 就达到 94.86%；自定义 CNN 从零开始，5 个 epoch 后准确率为 78.24%。
+**结论**：在相同数据和训练轮数下，迁移学习显著优于从零训练。
 
 ## 自定义 CNN 的问题分析
 
-对自定义 CNN 进行混淆矩阵和分类报告分析，结果如下：
+对自定义 CNN 进行混淆矩阵和分类报告分析：
+
 分类报告（自定义 CNN）：
-precision recall   f1-score   support
-   猫       0.74     0.90      0.81     2513
-   狗       0.87     0.68      0.77     2487
-accuracy  0.79  5000
+              precision    recall  f1-score   support
+           猫       0.74      0.90      0.81      2513
+           狗       0.87      0.68      0.77      2487
+    accuracy                           0.79      5000
 
-混淆矩阵：
-[[2267 246]
-[784 1703]]
-
-
-**问题**：模型对猫的召回率为 90%，但对狗的召回率仅 68%，存在明显偏科——模型倾向于将狗误判为猫。
+**问题**：模型对猫的召回率为 90%，但对狗的召回率仅 68%，存在明显偏科。
 
 **原因**：
-1. 从零训练，5 个 epoch 不足以让模型学到足够的判别性特征。
-2. 模型参数量较小，表达能力有限。
+1. 从零训练，5 个 epoch 不足以让模型学到足够的判别性特征
+2. 模型参数量较小，表达能力有限
 
-**改进方向**：
-- 增加训练轮数
-- 引入更强的数据增强
-- 增加网络深度
+**改进方向**：增加训练轮数、引入更强的数据增强、增加网络深度。
 
-## 预测示例
+## Web 界面
 
-使用 ResNet18 模型对测试图片进行预测：
-python predict.py "data/test/1.jpg"
+使用 FastAPI 搭建，支持浏览器上传图片并实时返回预测结果与置信度。
 
-输出：预测结果: 狗 🐶
-python predict.py "data/test/5.jpg"
+启动方式：
 
-输出：预测结果: 猫 🐱
+python -m uvicorn app:app --reload
 
+访问 http://127.0.0.1:8000
 
 ## 后续改进方向
 
 - 增加数据增强策略，缓解过拟合
 - 尝试更大的模型（如 ResNet50）
-- 对自定义 CNN 增加训练轮数，观察准确率能否继续提升
-- 部署为 Web 应用，支持浏览器上传图片
+- 对自定义 CNN 增加训练轮数
+- 将 Web 服务部署到云端
+
+## 预测示例
+
+python predict.py "data/test/1.jpg"
+# 输出：预测结果: 狗 🐶
+
+python predict.py "data/test/5.jpg"
+# 输出：预测结果: 猫 🐱"

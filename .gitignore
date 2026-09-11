@@ -1,3 +1,16 @@
+# 数据集（2万多张图片，不上传）
 data/
+
+# PyCharm 配置文件
 .idea/
+
+# 训练好的模型文件
 *.pth
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 虚拟环境（如果有）
+venv/
+env/

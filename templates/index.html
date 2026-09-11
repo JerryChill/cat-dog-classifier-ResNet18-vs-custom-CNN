@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>猫狗分类器 | ResNet18</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #2d3142;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 520px;
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 36px 32px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+        }
+
+        h1 {
+            font-size: 26px;
+            text-align: center;
+            margin-bottom: 8px;
+            color: #3b3f58;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 14px;
+            color: #8b90a8;
+            margin-bottom: 28px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .file-box {
+            border: 2px dashed #b8bcd4;
+            border-radius: 14px;
+            padding: 22px 16px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .file-box:hover {
+            border-color: #667eea;
+            background: #f2f4ff;
+        }
+
+        .file-box label {
+            display: block;
+            font-size: 14px;
+            color: #6b7091;
+            margin-bottom: 12px;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            font-size: 13px;
+            color: #4a4f6a;
+        }
+
+        input[type="file"]::file-selector-button {
+            margin-right: 12px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            background: #e6e9ff;
+            color: #4a4fbf;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background: #d5daff;
+        }
+
+        .preview-box {
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px dashed #d9ddf2;
+        }
+
+        .preview-img {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            max-height: 180px;
+            border-radius: 8px;
+            object-fit: contain;
+            box-shadow: 0 6px 16px rgba(45, 49, 66, 0.15);
+        }
+
+        .preview-img[hidden] {
+            display: none;
+        }
+
+        .preview-placeholder {
+            font-size: 13px;
+            color: #a2a7bd;
+        }
+
+        .preview-placeholder[hidden] {
+            display: none;
+        }
+
+        .preview-error {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #c0392b;
+        }
+
+        .preview-error[hidden] {
+            display: none;
+        }
+
+        button {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.35);
+            transition: transform 0.15s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 26px rgba(102, 126, 234, 0.45);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .panel {
+            margin-top: 26px;
+            padding: 22px 20px;
+            border-radius: 14px;
+            background: #f8f9ff;
+            border: 1px solid #e6e9ff;
+            text-align: center;
+        }
+
+        .panel.error {
+            background: #fff4f4;
+            border-color: #ffd6d6;
+            color: #c0392b;
+            font-size: 15px;
+        }
+
+        .panel .result-image {
+            margin-bottom: 16px;
+        }
+
+        .panel .filename {
+            font-size: 13px;
+            color: #8b90a8;
+            word-break: break-all;
+            margin-bottom: 12px;
+        }
+
+        .result-emoji {
+            font-size: 54px;
+            line-height: 1.1;
+        }
+
+        .result-label {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 8px 0 6px;
+        }
+
+        .result-label.cat {
+            color: #e07b39;
+        }
+
+        .result-label.dog {
+            color: #3b7dd8;
+        }
+
+        .confidence {
+            font-size: 15px;
+            color: #6b7091;
+            margin-bottom: 18px;
+        }
+
+        .bars {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .bar-row {
+            font-size: 13px;
+            color: #4a4f6a;
+        }
+
+        .bar-head {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .bar-track {
+            height: 10px;
+            border-radius: 6px;
+            background: #e6e9ff;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .bar-fill.cat {
+            background: linear-gradient(90deg, #f6b26b, #e07b39);
+        }
+
+        .bar-fill.dog {
+            background: linear-gradient(90deg, #7fb3f0, #3b7dd8);
+        }
+
+        .hint {
+            margin-top: 22px;
+            text-align: center;
+            font-size: 12px;
+            color: #a2a7bd;
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <h1>🐱 猫狗分类器 🐶</h1>
+        <p class="subtitle">ResNet18 · 输入 128×128 · 二分类</p>
+
+        <form action="/predict" method="post" enctype="multipart/form-data">
+            <div class="file-box">
+                <label for="file">选择一张图片（猫或狗）</label>
+                <input type="file" id="file" name="file" accept="image/*" required>
+                <div class="preview-box">
+                    <img id="preview" class="preview-img" alt="所选图片预览" hidden>
+                    <div id="preview-placeholder" class="preview-placeholder">尚未选择图片</div>
+                    <div id="preview-error" class="preview-error" hidden>图片预览加载失败</div>
+                </div>
+            </div>
+            <button type="submit">开始识别</button>
+        </form>
+
+        {% if error %}
+        <div class="panel error">{{ error }}</div>
+        {% endif %}
+
+        {% if result %}
+        <div class="panel" id="result-panel">
+            <img id="result-image" class="preview-img result-image" alt="上传的图片" hidden>
+            <div id="result-image-error" class="preview-error" hidden>图片预览加载失败</div>
+            {% if filename %}
+            <div class="filename">📄 {{ filename }}</div>
+            {% endif %}
+            <div class="result-emoji">{{ result.emoji }}</div>
+            <div class="result-label {{ result.key }}">预测结果：{{ result.label }}</div>
+            <div class="confidence">置信度 {{ result.confidence }}%</div>
+
+            <div class="bars">
+                <div class="bar-row">
+                    <div class="bar-head">
+                        <span>🐱 猫</span>
+                        <span>{{ result.cat_prob }}%</span>
+                    </div>
+                    <div class="bar-track">
+                        <div class="bar-fill cat" style="width: {{ result.cat_prob }}%;"></div>
+                    </div>
+                </div>
+                <div class="bar-row">
+                    <div class="bar-head">
+                        <span>🐶 狗</span>
+                        <span>{{ result.dog_prob }}%</span>
+                    </div>
+                    <div class="bar-track">
+                        <div class="bar-fill dog" style="width: {{ result.dog_prob }}%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <p class="hint">支持 JPG / PNG / BMP / WEBP 等常见格式</p>
+    </main>
+
+    <script>
+        (function () {
+            var STORAGE_KEY = "catdog_upload_preview";
+            var MAX_SIDE = 1024;
+            var JPEG_QUALITY = 0.85;
+
+            var fileInput = document.getElementById("file");
+            var previewImg = document.getElementById("preview");
+            var previewError = document.getElementById("preview-error");
+            var placeholder = document.getElementById("preview-placeholder");
+            var resultImage = document.getElementById("result-image");
+            var resultImageError = document.getElementById("result-image-error");
+
+            var activeUrls = [];
+
+            function toggle(el, show) {
+                if (el) {
+                    el.hidden = !show;
+                }
+            }
+
+            function trackUrl(url) {
+                if (url) {
+                    activeUrls.push(url);
+                }
+                return url;
+            }
+
+            function releaseUrls() {
+                for (var i = 0; i < activeUrls.length; i++) {
+                    try {
+                        URL.revokeObjectURL(activeUrls[i]);
+                    } catch (err) {
+                        /* 忽略无效 URL */
+                    }
+                }
+                activeUrls = [];
+            }
+
+            function clearPreview() {
+                if (previewImg) {
+                    previewImg.onload = null;
+                    previewImg.onerror = null;
+                    previewImg.removeAttribute("src");
+                }
+                toggle(previewImg, false);
+                toggle(previewError, false);
+                toggle(placeholder, true);
+            }
+
+            // 预览统一使用 URL.createObjectURL 生成的地址；尺寸已知后再显示，避免渲染出空白
+            function showPreview(src) {
+                if (!previewImg) {
+                    return;
+                }
+                previewImg.onload = function () {
+                    toggle(previewError, false);
+                    toggle(previewImg, true);
+                    toggle(placeholder, false);
+                };
+                previewImg.onerror = function () {
+                    toggle(previewImg, false);
+                    toggle(placeholder, false);
+                    toggle(previewError, true);
+                };
+                previewImg.src = src;
+            }
+
+            function savePreview(dataUrl) {
+                try {
+                    if (dataUrl) {
+                        sessionStorage.setItem(STORAGE_KEY, dataUrl);
+                    } else {
+                        sessionStorage.removeItem(STORAGE_KEY);
+                    }
+                } catch (err) {
+                    /* 压缩后的图片仍超出存储配额时，放弃结果页回显，不影响本次预览 */
+                }
+            }
+
+            function loadPreview() {
+                try {
+                    return sessionStorage.getItem(STORAGE_KEY);
+                } catch (err) {
+                    return null;
+                }
+            }
+
+            // 用 canvas 压缩到最长边 MAX_SIDE，再回调压缩后的 blob 地址与 dataURL
+            function compressImage(src, onReady, onFail) {
+                var image = new Image();
+
+                image.onload = function () {
+                    try {
+                        var width = image.naturalWidth || image.width;
+                        var height = image.naturalHeight || image.height;
+                        if (!width || !height) {
+                            onFail();
+                            return;
+                        }
+
+                        var scale = Math.min(1, MAX_SIDE / Math.max(width, height));
+                        var canvas = document.createElement("canvas");
+                        canvas.width = Math.max(1, Math.round(width * scale));
+                        canvas.height = Math.max(1, Math.round(height * scale));
+
+                        var ctx = canvas.getContext("2d");
+                        ctx.fillStyle = "#ffffff";
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                        var dataUrl = null;
+                        try {
+                            dataUrl = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+                        } catch (err) {
+                            dataUrl = null;
+                        }
+
+                        if (canvas.toBlob) {
+                            canvas.toBlob(function (blob) {
+                                if (blob) {
+                                    onReady(trackUrl(URL.createObjectURL(blob)), dataUrl);
+                                } else {
+                                    onReady(src, dataUrl);
+                                }
+                            }, "image/jpeg", JPEG_QUALITY);
+                        } else {
+                            onReady(dataUrl || src, dataUrl);
+                        }
+                    } catch (err) {
+                        onFail();
+                    }
+                };
+
+                image.onerror = function () {
+                    onFail();
+                };
+
+                image.src = src;
+            }
+
+            function dataUrlToObjectUrl(dataUrl) {
+                try {
+                    var parts = dataUrl.split(",");
+                    if (parts.length < 2) {
+                        return null;
+                    }
+                    var meta = parts[0];
+                    var mime = (meta.match(/data:([^;]+)/) || [])[1] || "image/jpeg";
+                    var bytes;
+                    var i;
+
+                    if (meta.indexOf("base64") !== -1) {
+                        var binary = atob(parts[1]);
+                        bytes = new Uint8Array(binary.length);
+                        for (i = 0; i < binary.length; i++) {
+                            bytes[i] = binary.charCodeAt(i);
+                        }
+                    } else {
+                        var text = decodeURIComponent(parts[1]);
+                        bytes = new Uint8Array(text.length);
+                        for (i = 0; i < text.length; i++) {
+                            bytes[i] = text.charCodeAt(i);
+                        }
+                    }
+
+                    return trackUrl(URL.createObjectURL(new Blob([bytes], { type: mime })));
+                } catch (err) {
+                    return null;
+                }
+            }
+
+            if (fileInput) {
+                fileInput.addEventListener("change", function () {
+                    var file = this.files && this.files[0];
+                    releaseUrls();
+
+                    if (!file) {
+                        clearPreview();
+                        savePreview(null);
+                        return;
+                    }
+
+                    var objectUrl = trackUrl(URL.createObjectURL(file));
+                    toggle(previewError, false);
+
+                    compressImage(objectUrl, function (compressedUrl, dataUrl) {
+                        showPreview(compressedUrl);
+                        savePreview(dataUrl);
+                    }, function () {
+                        // 压缩失败时先用原图 objectURL 兜底，加载失败会触发 img.onerror 提示
+                        showPreview(objectUrl);
+                    });
+                });
+            }
+
+            if (resultImage) {
+                var saved = loadPreview();
+                if (saved) {
+                    var savedUrl = dataUrlToObjectUrl(saved) || saved;
+                    resultImage.onload = function () {
+                        toggle(resultImageError, false);
+                        toggle(resultImage, true);
+                    };
+                    resultImage.onerror = function () {
+                        toggle(resultImage, false);
+                        toggle(resultImageError, true);
+                    };
+                    resultImage.src = savedUrl;
+                }
+            }
+        })();
+    </script>
+</body>
+</html>
